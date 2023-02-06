@@ -1,9 +1,10 @@
 using UnityEngine;
 using System.Collections.Generic;
 using Kinect = Windows.Kinect;
-using UnityEngine.UI;
+using System.Linq;
 using System;
 using System.Collections;
+using Windows.Kinect;
 
 public class FencingKinectView : MonoBehaviour
 {
@@ -14,6 +15,11 @@ public class FencingKinectView : MonoBehaviour
     private BodySourceManager _BodyManager;
 
     private bool justCalledPause = false;
+
+    const int maxBodiesToTrack = 2;
+    private List<Body> bodyToTrack = new List<Body>();
+
+    private Dictionary<Body, double> d = new Dictionary<Body, double>();
 
     private Dictionary<Kinect.JointType, Kinect.JointType> _BoneMap = new Dictionary<Kinect.JointType, Kinect.JointType>()
     {
@@ -118,7 +124,6 @@ public class FencingKinectView : MonoBehaviour
 
             if (timeLeft >= this.duration)
             {
-                Debug.Log("id: " + this.userId + "\nGesture: " + this.gesture);
                 this.timestamp = timestamp;
                 this.state = 1;
                 this.action();
@@ -150,7 +155,7 @@ public class FencingKinectView : MonoBehaviour
             return;
         }
 
-        Kinect.Body[] data = _BodyManager.GetData();
+        Body[] data = _BodyManager.GetData();
         if (data == null)
         {
             return;
@@ -185,8 +190,9 @@ public class FencingKinectView : MonoBehaviour
         }
 
         //create body object
-        foreach (var body in data)
+        for (int i = 0; i < data.Length; i++)
         {
+            Body body = data[i];
             if (body == null)
             {
                 continue;
@@ -195,48 +201,79 @@ public class FencingKinectView : MonoBehaviour
 
             if (body.IsTracked)
             {
+                CameraSpacePoint headJoint = body.Joints[JointType.Head].Position;
+                double bodyDistance = Math.Sqrt(headJoint.X * headJoint.X + headJoint.Y * headJoint.Y + headJoint.Z * headJoint.Z);
+
+                if(!d.ContainsKey(body))
+                {
+                    d.Add(body, bodyDistance);
+                }
+
+
                 if (!_Bodies.ContainsKey(body.TrackingId))
                 {
                     _Bodies[body.TrackingId] = CreateBodyObject(body.TrackingId);
                 }
+            }
+            else
+            {
+                d.Remove(body);
+            }
+        }
 
-                if (!isIndexDetermined)
+        //if (d.Count >= 2)
+        {
+            var sortedDict = from entry in d orderby entry.Value ascending select entry;
+            foreach (var kvp in sortedDict)
+            {
+                if (bodyToTrack.Count <= maxBodiesToTrack)
                 {
-                    if (_Bodies.Count == 1 && !isOnePlayerJoined)
+                    bodyToTrack.Add(kvp.Key);
+                }
+            }
+        }
+
+
+
+        foreach (var body in bodyToTrack)
+        {
+            if (!isIndexDetermined)
+            {
+                if (bodyToTrack.Count == 1 && !isOnePlayerJoined)
+                {
+                    tempX = GetVector3FromJoint(body.Joints[Kinect.JointType.Head]).x;
+                    initialBodies[0] = body;
+                    Debug.Log(body.TrackingId);
+                    isOnePlayerJoined = true;
+                    Debug.Log("one player");
+                }
+                else if (bodyToTrack.Count == 2)
+                {
+                    Debug.Log("two players");
+
+                    isIndexDetermined = true;
+                    float otherX = GetVector3FromJoint(body.Joints[Kinect.JointType.Head]).x;
+                    if (otherX > tempX)
                     {
-                        tempX = GetVector3FromJoint(body.Joints[Kinect.JointType.Head]).x;
+                        bodyToTrack[1] = body;
+                    }
+                    else
+                    {
+                        var tempBody = initialBodies[0];
                         initialBodies[0] = body;
-                        isOnePlayerJoined = true;
-                        Debug.Log("one player");
+                        initialBodies[1] = tempBody;
                     }
-                    else if (_Bodies.Count == 2)
-                    {
-                        Debug.Log("two players");
+                    AddGestureDatas();
+                }
+            }
 
-                        isIndexDetermined = true;
-                        float otherX = GetVector3FromJoint(body.Joints[Kinect.JointType.Head]).x;
-                        if (otherX > tempX)
-                        {
-                            initialBodies[1] = body;
-                        }
-                        else
-                        {
-                            var tempBody = initialBodies[0];
-                            initialBodies[0] = body;
-                            initialBodies[1] = tempBody;
-                        }
-                        AddGestureDatas();
-                    }
-                }
-
-                if (GameManager.instance.GetIsPaused())
-                {
-                    UpdateHand(body);
-                }
-                else
-                {
-                    ProcessSkeleton(body);
-                }
+            if (GameManager.instance.GetIsPaused())
+            {
+                UpdateHand(body);
+            }
+            else
+            {
+                ProcessSkeleton(body);
             }
         }
     }
@@ -254,8 +291,9 @@ public class FencingKinectView : MonoBehaviour
 
     private void AddGestureDatas()
     {
-        for (int index = 0; index < 2; index++)
+        for (int index = 0; index < maxBodiesToTrack; index++)
         {
+            Debug.Log(index);
             var id = initialBodies[index].TrackingId;
             if (index == 0)
             {

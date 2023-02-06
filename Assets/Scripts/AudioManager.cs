@@ -41,19 +41,23 @@ public class AudioManager : MonoBehaviour
 
 	private void Start()
 	{
+		audioSource = this.GetComponent<AudioSource>();
 		hitClips = Resources.LoadAll<AudioClip>("Audio/hitSounds");
 		deflectionSound = Resources.LoadAll<AudioClip>("Audio/deflectionSounds");
 
 		gunHit = Resources.Load<AudioClip>("Audio/gunHit");
 		swordSwing = Resources.Load<AudioClip>("Audio/swordSwing");
-		shieldHit = Resources.Load<AudioClip>("Audio/shieldHit");
+		shieldHit = Resources.Load<AudioClip>("Audio/ShieldHit");
 		gunfire = Resources.Load<AudioClip>("Audio/gunfire");
 
-		throw new NotImplementedException();
+		Debug.Log(hitClips.Length);
+		Debug.Log(deflectionSound.Length);
 	}
 	public static void playSwingSound()
 	{
-		audioSource.PlayOneShot(swordSwing);
+		audioSource.clip = swordSwing;
+		audioSource.volume = 0.3f;
+		audioSource.Play();
 	}
 
 	public static void playShieldHit()

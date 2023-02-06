@@ -17,6 +17,7 @@ public class Sword : MonoBehaviour
             }
             else
             {
+                AudioManager.RandomDeflectSound();
                 transform.root.GetComponent<Player>().Stunned();
             }
         }
@@ -24,9 +25,10 @@ public class Sword : MonoBehaviour
         {
             Player otherPlayer = collision.transform.root.GetComponent<Player>();
             bool otherPlayerDefending = otherPlayer.GetIsDefending();
-
+            AudioManager.RandomDeflectSound();
             if (!otherPlayerDefending) 
             {
+                
                 GameManager.instance.ClashCount += 1;
             }
             else

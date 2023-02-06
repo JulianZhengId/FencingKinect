@@ -280,7 +280,7 @@ public class ShootingKinectView : MonoBehaviour
             Vector3 torso = GetVector3FromJoint(body.Joints[Kinect.JointType.SpineMid]);
 
             Vector3 armDirection = (leftHandTip - torso).normalized;
-            float angle = Mathf.Atan2(armDirection.y, armDirection.x) * Mathf.Rad2Deg;
+            float angle = Mathf.Atan2(armDirection.y, -armDirection.x) * Mathf.Rad2Deg;
             player2Controller.RotateArm(angle + 10f);
 
             Kinect.Joint hip = body.Joints[Kinect.JointType.HipLeft];
