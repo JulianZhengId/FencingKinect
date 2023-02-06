@@ -5,8 +5,23 @@ using UnityEngine.SceneManagement;
 
 public class PlayButton : MonoBehaviour
 {
-    public void OnClickGame()
+    public void StartFencing()
     {
         SceneManager.LoadScene(1);
+    }
+
+    public void StartShooting()
+    {
+        SceneManager.LoadScene(2);
+    }
+
+    public void QuitGame()
+    {
+        Application.Quit();
+    }
+
+    public void MainMenu()
+    {
+        SceneManager.LoadScene("Main Menu");
     }
 }

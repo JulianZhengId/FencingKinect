@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿/*using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using Kinect = Windows.Kinect;
@@ -9,6 +9,8 @@ public class BodySourceView : MonoBehaviour
     public Material BoneMaterial;
     public GameObject ragdoll;
     public GameObject BodySourceManager;
+    private Vector3 previousLeftHandPos;
+    private Vector3 diffPos;
     
     private Dictionary<ulong, GameObject> _Bodies = new Dictionary<ulong, GameObject>();
     private BodySourceManager _BodyManager;
@@ -17,7 +19,7 @@ public class BodySourceView : MonoBehaviour
     
     private Dictionary<Kinect.JointType, Kinect.JointType> _BoneMap = new Dictionary<Kinect.JointType, Kinect.JointType>()
     {
-    /*    { Kinect.JointType.FootLeft, Kinect.JointType.AnkleLeft },
+    *//*    { Kinect.JointType.FootLeft, Kinect.JointType.AnkleLeft },
         { Kinect.JointType.AnkleLeft, Kinect.JointType.KneeLeft },
         { Kinect.JointType.KneeLeft, Kinect.JointType.HipLeft },
         { Kinect.JointType.HipLeft, Kinect.JointType.SpineBase },
@@ -26,7 +28,7 @@ public class BodySourceView : MonoBehaviour
         { Kinect.JointType.AnkleRight, Kinect.JointType.KneeRight },
         { Kinect.JointType.KneeRight, Kinect.JointType.HipRight },
         { Kinect.JointType.HipRight, Kinect.JointType.SpineBase },
-        */
+        *//*
         { Kinect.JointType.HandTipLeft, Kinect.JointType.HandLeft },
         { Kinect.JointType.ThumbLeft, Kinect.JointType.HandLeft },
         { Kinect.JointType.HandLeft, Kinect.JointType.WristLeft },
@@ -41,10 +43,10 @@ public class BodySourceView : MonoBehaviour
         { Kinect.JointType.ElbowRight, Kinect.JointType.ShoulderRight },
         { Kinect.JointType.ShoulderRight, Kinect.JointType.SpineShoulder },
         
-/*        { Kinect.JointType.SpineBase, Kinect.JointType.SpineMid },
+*//*        { Kinect.JointType.SpineBase, Kinect.JointType.SpineMid },
         { Kinect.JointType.SpineMid, Kinect.JointType.SpineShoulder },
         { Kinect.JointType.SpineShoulder, Kinect.JointType.Neck },
-        { Kinect.JointType.Neck, Kinect.JointType.Head },*/
+        { Kinect.JointType.Neck, Kinect.JointType.Head },*//*
     };
 
     private List<GestureData> playerGestureDatas = new List<GestureData>();
@@ -106,15 +108,16 @@ public class BodySourceView : MonoBehaviour
 
     private void Start()
     {
-        foreach (Kinect.JointType joint in Enum.GetValues(typeof(Kinect.JointType)))
+        
+*//*        foreach (Kinect.JointType joint in Enum.GetValues(typeof(Kinect.JointType)))
         {
-/*            Transform jointTransform = Ragdoll.transform.Find(joint.ToString());
+            Transform jointTransform = Ragdoll.transform.Find(joint.ToString());
             if (jointTransform != null)
             {
                 _joints.Add(joint, jointTransform);
                 _prevJointPositions.Add(joint, jointTransform.position);
-            }*/
-        }
+            }
+        }*//*
     }
 
     void Update () 
@@ -178,6 +181,7 @@ public class BodySourceView : MonoBehaviour
                 if(!_Bodies.ContainsKey(body.TrackingId))
                 {
                     _Bodies[body.TrackingId] = CreateBodyObject(body.TrackingId);
+                    TestInitial(body);
                     //AddGestureDatas(body.TrackingId);
                 }
                 
@@ -185,6 +189,12 @@ public class BodySourceView : MonoBehaviour
                 //ProcessSkeleton(body);
             }
         }
+    }
+
+    private void TestInitial(Kinect.Body body)
+    {
+        Debug.Log("set");
+        previousLeftHandPos = GameObject.Find("HandLeft").transform.position;
     }
 
     private GameObject CreateBodyObject(ulong id)
@@ -225,21 +235,44 @@ public class BodySourceView : MonoBehaviour
             jointObj.localPosition = GetVector3FromJoint(sourceJoint);
 
             LineRenderer lr = jointObj.GetComponent<LineRenderer>();
-/*            if (body.Joints[jt].JointType == Kinect.JointType.HandRight && targetJoint.HasValue)
+*//*            if (body.Joints[jt].JointType == Kinect.JointType.HandRight && targetJoint.HasValue)
             {
                 //armTest.transform.localPosition = Vector3.Lerp(jointObj.localPosition, GetVector3FromJoint(targetJoint.Value), Time.deltaTime * 3f) ;
                 Debug.Log("test");
-            }*/
+            }*//*
 
-            if (jt == Kinect.JointType.HandLeft || jt == Kinect.JointType.HandRight)
+            if (jt == Kinect.JointType.HandLeft *//*|| jt == Kinect.JointType.HandRight*//*)
             {
                 // get the corresponding hand bone of the ragdoll
-                Debug.Log("Left and Right hand Name: "+ jt.ToString());
-                Transform ragdollHand = GameObject.Find(jt.ToString()).transform;
+                //Debug.Log("Left and Right hand Name: "+ jt.ToString());
+                Transform ragdollHand = GameObject.Find("HandLeft").transform;
+                Kinect.Joint neck = body.Joints[Kinect.JointType.Neck];
+                Kinect.Joint leftHand = body.Joints[Kinect.JointType.HandLeft];
+                var direction = new Vector3(leftHand.Position.X - neck.Position.X, leftHand.Position.Y - neck.Position.Y, leftHand.Position.Z - neck.Position.Z);
+                var ragdollTorsoPos = GameObject.Find("Torso").transform.position;
                 if (ragdollHand != null)
                 {
                     // set the position and rotation of the ragdoll hand to match the joint position
-                    ragdollHand.localPosition = Vector3.Lerp(jointObj.localPosition, GetVector3FromJoint(targetJoint.Value), Time.deltaTime * 3f);
+                    diffPos = jointObj.position - previousLeftHandPos;
+                    //Debug.Log(posDifference);
+                    //ragdollHand.position += diffPos;
+                    previousLeftHandPos = jointObj.position;
+                    var distance = Vector3.Distance(ragdollHand.position, ragdollTorsoPos);
+                    if(distance > 3.4f)
+                    {
+                        direction = direction.normalized;
+                        ragdollHand.position = ragdollTorsoPos + direction * 3.4f;
+
+                    }
+                    if(diffPos.magnitude > 0.01f)
+                    {
+                        //ragdollHand.position += direction;
+                        ragdollHand.position += diffPos;
+                        //ragdollHand.position = Vector3.Lerp(ragdollHand.position, ragdollHand.position + diffPos, Time.deltaTime * 3f);
+
+
+                    }
+                    //ragdollHand.localPosition = Vector3.Lerp(jointObj.localPosition, GetVector3FromJoint(targetJoint.Value), Time.deltaTime * 3f);
                 }
             }
             else
@@ -268,10 +301,6 @@ public class BodySourceView : MonoBehaviour
         return new Quaternion(rot.X, rot.Y, rot.Z, rot.W);
     }
 
-
-    /*    private void UpdateEachBodyObject(Kinect.Body body, GameObject)
-    */
-
     private static Color GetColorForState(Kinect.TrackingState state)
     {
         switch (state)
@@ -292,76 +321,75 @@ public class BodySourceView : MonoBehaviour
         return new Vector3(joint.Position.X * 10, joint.Position.Y * 10, joint.Position.Z * 10);
     }
 
+    private void AddGestureDatas(ulong id)
+    {
+        Debug.Log("add: " + id);
+        GestureData raiseLeftHandGestureData = new GestureData(id, 0, 2f, Gesture.RaiseLeftHand);
+        GestureData raiseRightHandGestureData = new GestureData(id, 0, 2f, Gesture.RaiseRightHand);
+        playerGestureDatas.Add(raiseLeftHandGestureData);
+        playerGestureDatas.Add(raiseRightHandGestureData);
+    }
 
-
-    /*    private void AddGestureDatas(ulong id)
+    private void RemoveGestureDatas(ulong id)
+    {
+        Debug.Log("remove: " + id);
+        List<GestureData> copyGestureDatas = new List<GestureData>(playerGestureDatas);
+        foreach (var gestureData in copyGestureDatas)
         {
-            Debug.Log("add: " + id);
-            GestureData raiseLeftHandGestureData = new GestureData(id, 0, 2f, Gesture.RaiseLeftHand);
-            GestureData raiseRightHandGestureData = new GestureData(id, 0, 2f, Gesture.RaiseRightHand);
-            playerGestureDatas.Add(raiseLeftHandGestureData);
-            playerGestureDatas.Add(raiseRightHandGestureData);
+            if (gestureData.userId == id)
+                playerGestureDatas.Remove(gestureData);
         }
+    }
 
-        private void RemoveGestureDatas(ulong id)
+    public void ProcessSkeleton(Kinect.Body body)
+    {
+        // get body id
+        ulong id = body.TrackingId;
+
+        //check for each gesture
+        foreach (var gestureData in playerGestureDatas)
         {
-            Debug.Log("remove: " + id);
-            List<GestureData> copyGestureDatas = new List<GestureData>(playerGestureDatas);
-            foreach (var gestureData in copyGestureDatas)
+            if (id != gestureData.userId) return;
+
+            switch (gestureData.gesture)
             {
-                if (gestureData.userId == id)
-                    playerGestureDatas.Remove(gestureData);
+                case Gesture.RaiseRightHand:
+                    Kinect.Joint rightHand = body.Joints[Kinect.JointType.HandRight];
+                    Kinect.Joint rightShoulder = body.Joints[Kinect.JointType.ShoulderRight];
+                    bool raiseRightHand = (rightHand.Position.Y - rightShoulder.Position.Y) > 0.1f;
+                    switch (gestureData.state)
+                    {
+                        //detection
+                        case 0:
+                            if (raiseRightHand)
+                                gestureData.SetGestureTracking(Time.time);
+                            break;
+                        //completion
+                        case 1:
+                            gestureData.CheckGestureComplete(Time.time, raiseRightHand);
+                            break;
+                    }
+                    break;
+
+                case Gesture.RaiseLeftHand:
+                    Kinect.Joint leftHand = body.Joints[Kinect.JointType.HandLeft];
+                    Kinect.Joint leftShoulder = body.Joints[Kinect.JointType.ShoulderLeft];
+                    bool raiseLeftHand = (leftHand.Position.Y - leftShoulder.Position.Y) > 0.1f;
+                    switch (gestureData.state)
+                    {
+                        case 0:
+                            if (raiseLeftHand)
+                                gestureData.SetGestureTracking(Time.time);
+                            break;
+                        case 1:
+                            gestureData.CheckGestureComplete(Time.time, raiseLeftHand);
+                            break;
+                    }
+                    break;
+                default:
+                    break;
             }
         }
-
-        public void ProcessSkeleton(Kinect.Body body)
-        {
-            // get body id
-            ulong id = body.TrackingId;
-
-            //check for each gesture
-            foreach (var gestureData in playerGestureDatas)
-            {
-                if (id != gestureData.userId) return;
-
-                switch (gestureData.gesture)
-                {
-                    case Gesture.RaiseRightHand:
-                        Kinect.Joint rightHand = body.Joints[Kinect.JointType.HandRight];
-                        Kinect.Joint rightShoulder = body.Joints[Kinect.JointType.ShoulderRight];
-                        bool raiseRightHand = (rightHand.Position.Y - rightShoulder.Position.Y) > 0.1f;
-                        switch (gestureData.state)
-                        {
-                            //detection
-                            case 0:
-                                if (raiseRightHand)
-                                    gestureData.SetGestureTracking(Time.time);
-                                break;
-                            //completion
-                            case 1:
-                                gestureData.CheckGestureComplete(Time.time, raiseRightHand);
-                                break;
-                        }
-                        break;
-
-                    case Gesture.RaiseLeftHand:
-                        Kinect.Joint leftHand = body.Joints[Kinect.JointType.HandLeft];
-                        Kinect.Joint leftShoulder = body.Joints[Kinect.JointType.ShoulderLeft];
-                        bool raiseLeftHand = (leftHand.Position.Y - leftShoulder.Position.Y) > 0.1f;
-                        switch (gestureData.state)
-                        {
-                            case 0:
-                                if (raiseLeftHand)
-                                    gestureData.SetGestureTracking(Time.time);
-                                break;
-                            case 1:
-                                gestureData.CheckGestureComplete(Time.time, raiseLeftHand);
-                                break;
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }*/
+    }
 }
+*/
